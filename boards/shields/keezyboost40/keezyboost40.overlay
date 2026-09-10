@@ -1,10 +1,13 @@
 #include <dt-bindings/zmk/matrix_transform.h>
+#include <zephyr/dt-bindings/mipi_dbi/mipi_dbi.h>
+#include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 #include "keezyboost40-layouts.dtsi"
 
 / {
     chosen {
         zmk,kscan = &kscan0;
         zmk,physical-layout = &physical_layout0;
+        zephyr,display = &st7735r;
     };
 
     kscan0: kscan {
@@ -43,4 +46,62 @@
             RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(3,6) RC(3,7) RC(3,8) RC(3,9)
         >;
     };
+
+    backlight: backlight {
+        compatible = "regulator-fixed";
+        regulator-name = "lcd_backlight";
+        enable-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
+        regulator-boot-on;
+        regulator-always-on;
+    };
+
+    mipi_dbi {
+        compatible = "zephyr,mipi-dbi-spi";
+        spi-dev = <&spi0>;
+        dc-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        reset-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+        write-only;
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        st7735r: st7735r@0 {
+            compatible = "sitronix,st7735r";
+            reg = <0>;
+            mipi-max-frequency = <20000000>;
+            mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+            width = <128>;
+            height = <160>;
+            x-offset = <0>;
+            y-offset = <0>;
+            madctl = <0xC8>;
+            colmod = <0x55>;
+            pwctr1 = [a2 02 84];
+            pwctr2 = [c5];
+            pwctr3 = [0a 00];
+            pwctr4 = [8a 2a];
+            pwctr5 = [8a ee];
+            vmctr1 = <0x0e>;
+            frmctr1 = [01 2c 2d];
+            frmctr2 = [01 2c 2d];
+            frmctr3 = [01 2c 2d 01 2c 2d];
+            gamctrp1 = [02 1c 07 12 37 32 29 2d 29 25 2b 39 00 01 03 10];
+            gamctrn1 = [03 1d 07 06 2e 2c 29 2d 2e 2e 37 3f 00 00 02 10];
+        };
+    };
 };
+
+&pinctrl {
+    spi0_keezyboost40: spi0_keezyboost40 {
+        group1 {
+            pinmux = <SPI0_SCK_P18>, <SPI0_TX_P19>;
+        };
+    };
+};
+
+&spi0 {
+    status = "okay";
+    pinctrl-0 = <&spi0_keezyboost40>;
+    pinctrl-names = "default";
+    cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+};
+
